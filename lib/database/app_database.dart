@@ -6,8 +6,7 @@ part 'app_database.g.dart';
 class Tasks extends Table {
   IntColumn get id => integer().autoIncrement()(); // 자동 증가 ID
   TextColumn get title => text()(); // 할 일 제목
-  BoolColumn get isCompleted =>
-      boolean().withDefault(const Constant(false))(); // 완료 여부
+  BoolColumn get isCompleted => boolean().withDefault(const Constant(false))(); // 완료 여부
   DateTimeColumn get createdAt => dateTime()(); // 생성 시간
   DateTimeColumn get completeAt => dateTime().nullable()(); // 완료 시간
 }
@@ -23,27 +22,21 @@ class AppDatabase extends _$AppDatabase {
 
   // 모든 업무 실시간 감지 (최신순 정렬)
   Stream<List<Task>> watchAllTasks() {
-    return (select(tasks)..orderBy([
-          (t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc),
-        ]))
-        .watch();
+    return (select(
+      tasks,
+    )..orderBy([(t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)])).watch();
   }
 
   // 업무 추가
   Future<int> insertTask(String title) {
-    return into(
-      tasks,
-    ).insert(TasksCompanion.insert(title: title, createdAt: DateTime.now()));
+    return into(tasks).insert(TasksCompanion.insert(title: title, createdAt: DateTime.now()));
   }
 
   // 완료 상태 토글
   Future<void> toggleTask(Task task) {
     final newStatus = !task.isCompleted;
     return update(tasks).replace(
-      task.copyWith(
-        isCompleted: newStatus,
-        completeAt: Value(newStatus ? DateTime.now() : null),
-      ),
+      task.copyWith(isCompleted: newStatus, completeAt: Value(newStatus ? DateTime.now() : null)),
     );
   }
 
@@ -53,19 +46,25 @@ class AppDatabase extends _$AppDatabase {
   }
 
   // 기간별 완료 업무 조회 (주간 보고)
-  Future<List<Task>> getCompletedTasksByDate(DateTime start, DateTime end) {
+  Stream<List<Task>> watchCompletedTasksByDate(DateTime start, DateTime end) {
     // start는 00:00:00, end는 23:59:59로 설정
     final startDate = DateTime(start.year, start.month, start.day);
     final endDate = DateTime(end.year, end.month, end.day, 23, 59, 59);
 
     return (select(tasks)
           ..where(
-            (t) =>
-                t.isCompleted.equals(true) &
-                t.completeAt.isBetweenValues(startDate, endDate),
+            (t) => t.isCompleted.equals(true) & t.completeAt.isBetweenValues(startDate, endDate),
           )
           ..orderBy([(t) => OrderingTerm(expression: t.completeAt)]))
-        .get();
+        .watch();
+  }
+
+  // 하스토리용: 완료된 업무만 최신순으로 실시간 감지
+  Stream<List<Task>> watchCompletedTasks() {
+    return (select(tasks)
+          ..where((t) => t.isCompleted.equals(true))
+          ..orderBy([(t) => OrderingTerm(expression: t.completeAt, mode: OrderingMode.desc)]))
+        .watch();
   }
 
   // DB 파일 연결 설정 (윈도우/맥/모바일 공용)

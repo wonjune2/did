@@ -1,3 +1,5 @@
+import 'package:did/screens/history_screen.dart';
+import 'package:did/screens/report_screen.dart';
 import 'package:did/screens/todo_screen.dart';
 import 'package:flutter/material.dart';
 
@@ -27,15 +29,15 @@ class _MainScreenState extends State<MainScreen> {
             labelType: NavigationRailLabelType.all,
             destinations: const [
               NavigationRailDestination(icon: Icon(Icons.today), label: Text('To-do')),
-              NavigationRailDestination(icon: Icon(Icons.history), label: Text('히스토리')),
               NavigationRailDestination(icon: Icon(Icons.summarize), label: Text('주간 보고')),
+              NavigationRailDestination(icon: Icon(Icons.history), label: Text('히스토리')),
             ],
           ),
           const VerticalDivider(thickness: 1, width: 1),
           Expanded(
             child: IndexedStack(
               index: _selectedIndex,
-              children: [const TodoScreen(), _buildContent('히스토리'), _buildContent('주간 보고')],
+              children: const [TodoScreen(), ReportScreen(), HistoryScreen()],
             ),
           ),
         ],
