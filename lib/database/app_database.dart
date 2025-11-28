@@ -104,11 +104,19 @@ class AppDatabase extends _$AppDatabase {
     return (delete(tasks)..where((t) => t.id.equals(id))).go();
   }
 
-  // 기간별 완료 업무 조회 (주간 보고)
+  // 주간보고: 기간별 완료 업무 조회 (주간 보고)
   Stream<List<Task>> watchCompletedTasksByDate(DateTime start, DateTime end) {
     // start는 00:00:00, end는 23:59:59로 설정
     final startDate = DateTime(start.year, start.month, start.day);
     final endDate = DateTime(end.year, end.month, end.day, 23, 59, 59);
+
+    final query = select(
+      tasks,
+    ).join([leftOuterJoin(projects, projects.id.equalsExp(tasks.projectId))]);
+
+    query.where(
+      tasks.isCompleted.equals(true) & tasks.completeAt.isBetweenValues(startDate, endDate),
+    );
 
     return (select(tasks)
           ..where(
@@ -119,11 +127,19 @@ class AppDatabase extends _$AppDatabase {
   }
 
   // 하스토리용: 완료된 업무만 최신순으로 실시간 감지
-  Stream<List<Task>> watchCompletedTasks() {
-    return (select(tasks)
-          ..where((t) => t.isCompleted.equals(true))
-          ..orderBy([(t) => OrderingTerm(expression: t.completeAt, mode: OrderingMode.desc)]))
-        .watch();
+  Stream<List<TaskWithProject>> watchCompletedTasksWithProjects() {
+    final query = select(
+      tasks,
+    ).join([leftOuterJoin(projects, projects.id.equalsExp(tasks.projectId))]);
+
+    // 완료된 것만 필터링
+    query.where(tasks.isCompleted.equals(true));
+
+    return query.watch().map((rows) {
+      return rows.map((row) {
+        return TaskWithProject(task: row.readTable(tasks), project: row.readTableOrNull(projects));
+      }).toList();
+    });
   }
 
   // DB 파일 연결 설정 (윈도우/맥/모바일 공용)
