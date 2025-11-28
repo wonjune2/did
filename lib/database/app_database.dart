@@ -118,6 +118,8 @@ class AppDatabase extends _$AppDatabase {
       tasks.isCompleted.equals(true) & tasks.completeAt.isBetweenValues(startDate, endDate),
     );
 
+    query.orderBy([OrderingTerm(expression: tasks.completeAt)]);
+
     return (select(tasks)
           ..where(
             (t) => t.isCompleted.equals(true) & t.completeAt.isBetweenValues(startDate, endDate),
