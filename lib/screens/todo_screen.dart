@@ -48,10 +48,7 @@ class _TodoScreenState extends State<TodoScreen> {
           onSubmitted: (_) => submit(),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("취소"),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("취소")),
           FilledButton(onPressed: submit, child: const Text("추가")),
         ],
       ),
@@ -119,9 +116,7 @@ class _TodoScreenState extends State<TodoScreen> {
     final result = ReportFormat().dailyReportFormat(buffer.toString());
 
     Clipboard.setData(ClipboardData(text: result));
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('복사 완료!')));
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('복사 완료!')));
   }
 
   @override
@@ -149,21 +144,12 @@ class _TodoScreenState extends State<TodoScreen> {
                             decoration: const InputDecoration(
                               labelText: '프로젝트 선택',
                               border: OutlineInputBorder(),
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
-                              ),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                             ),
                             items: [
-                              const DropdownMenuItem(
-                                value: null,
-                                child: Text("프로젝트 없음 (일반)"),
-                              ),
+                              const DropdownMenuItem(value: null, child: Text("프로젝트 없음 (일반)")),
                               ...projects.map(
-                                (p) => DropdownMenuItem(
-                                  value: p.id,
-                                  child: Text(p.name),
-                                ),
+                                (p) => DropdownMenuItem(value: p.id, child: Text(p.name)),
                               ),
                             ],
                             onChanged: (value) {
@@ -195,6 +181,7 @@ class _TodoScreenState extends State<TodoScreen> {
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.task_alt),
                         ),
+                        autofocus: true,
                         onSubmitted: (value) => _addTask(value),
                       ),
                     ),
@@ -219,9 +206,7 @@ class _TodoScreenState extends State<TodoScreen> {
                 }
 
                 final items = snapshot.data!;
-                final incompleteCount = items
-                    .where((i) => !i.task.isCompleted)
-                    .length;
+                final incompleteCount = items.where((i) => !i.task.isCompleted).length;
 
                 if (items.isEmpty) {
                   return const Center(child: Text("업무가 없습니다."));
