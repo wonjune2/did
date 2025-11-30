@@ -1,7 +1,10 @@
+import 'package:did/services/settings_service.dart';
+
 class ReportFormat {
   String dailyReportFormat(String report) {
-    String prefix = "안녕하세요. ";
-    String suffix = " 진행합니다.";
+    final settings = SettingsService();
+    String prefix = settings.dailyHeader;
+    String suffix = settings.dailyFooter;
 
     return prefix + report + suffix;
   }

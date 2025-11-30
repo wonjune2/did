@@ -29,29 +29,30 @@ class _TodoScreenState extends State<TodoScreen> {
   // 2. 프로젝트 추가 팝업
   void _showAddProjectDialog() {
     final projectController = TextEditingController();
+
+    void submit() {
+      if (projectController.text.isNotEmpty) {
+        db.insertProject(projectController.text);
+        Navigator.pop(context);
+      }
+    }
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("새 프로젝트/고객사 추가"),
         content: TextField(
           controller: projectController,
-          decoration: const InputDecoration(hintText: "예: 한미글로벌, 삼성전자"),
+          decoration: const InputDecoration(hintText: "예: 삼성전자, SK, 엔비디아"),
           autofocus: true,
+          onSubmitted: (_) => submit(),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text("취소"),
           ),
-          FilledButton(
-            onPressed: () {
-              if (projectController.text.isNotEmpty) {
-                db.insertProject(projectController.text);
-                Navigator.pop(context);
-              }
-            },
-            child: const Text("추가"),
-          ),
+          FilledButton(onPressed: submit, child: const Text("추가")),
         ],
       ),
     );

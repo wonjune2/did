@@ -6,6 +6,7 @@ part 'app_database.g.dart';
 class Projects extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get name => text().unique()();
+  BoolColumn get isActive => boolean().withDefault(const Constant(true))();
 }
 
 class Tasks extends Table {
@@ -31,7 +32,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   // 마이그레이션 로직 (기존 앱 사용자를 위해 필요하지만, 개발 중엔 DB파일 삭제 추천)
   @override
@@ -46,14 +47,28 @@ class AppDatabase extends _$AppDatabase {
           await m.createTable(projects);
           await m.addColumn(tasks, tasks.projectId);
         }
+        if (from < 3) {
+          // 버전 3으로 올 때 Projects 테이블에 isActive 컬럼 추가
+          await m.addColumn(projects, projects.isActive);
+
+          // 기존 데이터의 isActive를 true로 설정
+          await (update(
+            projects,
+          )).write(const ProjectsCompanion(isActive: Value(true)));
+        }
       },
     );
   }
 
   // -- 프로젝트 관련 쿼리 --
 
-  // 모든 프로젝트 가져오기
+  // 모든 프로젝트 가져오기 (활성화된 것만)
   Stream<List<Project>> watchAllProjects() {
+    return (select(projects)..where((p) => p.isActive.equals(true))).watch();
+  }
+
+  // 모든 프로젝트 가져오기 (비활성화 포함 - 설정 화면용)
+  Stream<List<Project>> watchAllProjectsIncludingInactive() {
     return select(projects).watch();
   }
 
@@ -62,9 +77,11 @@ class AppDatabase extends _$AppDatabase {
     return into(projects).insert(ProjectsCompanion.insert(name: name));
   }
 
-  // 프로젝트 삭제 (관련 업무의 projectId를 null로 변경할지, 삭제할지 결정 필요. 여기선 간단히 프로젝트만 삭제)
-  Future<int> deleteProject(int id) {
-    return (delete(projects)..where((p) => p.id.equals(id))).go();
+  // 프로젝트 삭제 (비활성화 처리)
+  Future<void> deleteProject(int id) {
+    return (update(projects)..where((p) => p.id.equals(id))).write(
+      const ProjectsCompanion(isActive: Value(false)),
+    );
   }
 
   // -- 업무 쿼리 메서드들 (Service 역할) --

@@ -31,8 +31,23 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
     requiredDuringInsert: true,
     defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
   );
+  static const VerificationMeta _isActiveMeta = const VerificationMeta(
+    'isActive',
+  );
   @override
-  List<GeneratedColumn> get $columns => [id, name];
+  late final GeneratedColumn<bool> isActive = GeneratedColumn<bool>(
+    'is_active',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_active" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, name, isActive];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -56,6 +71,12 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
     } else if (isInserting) {
       context.missing(_nameMeta);
     }
+    if (data.containsKey('is_active')) {
+      context.handle(
+        _isActiveMeta,
+        isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta),
+      );
+    }
     return context;
   }
 
@@ -73,6 +94,10 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
         DriftSqlType.string,
         data['${effectivePrefix}name'],
       )!,
+      isActive: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_active'],
+      )!,
     );
   }
 
@@ -85,17 +110,23 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
 class Project extends DataClass implements Insertable<Project> {
   final int id;
   final String name;
-  const Project({required this.id, required this.name});
+  final bool isActive;
+  const Project({required this.id, required this.name, required this.isActive});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['name'] = Variable<String>(name);
+    map['is_active'] = Variable<bool>(isActive);
     return map;
   }
 
   ProjectsCompanion toCompanion(bool nullToAbsent) {
-    return ProjectsCompanion(id: Value(id), name: Value(name));
+    return ProjectsCompanion(
+      id: Value(id),
+      name: Value(name),
+      isActive: Value(isActive),
+    );
   }
 
   factory Project.fromJson(
@@ -106,6 +137,7 @@ class Project extends DataClass implements Insertable<Project> {
     return Project(
       id: serializer.fromJson<int>(json['id']),
       name: serializer.fromJson<String>(json['name']),
+      isActive: serializer.fromJson<bool>(json['isActive']),
     );
   }
   @override
@@ -114,15 +146,20 @@ class Project extends DataClass implements Insertable<Project> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'name': serializer.toJson<String>(name),
+      'isActive': serializer.toJson<bool>(isActive),
     };
   }
 
-  Project copyWith({int? id, String? name}) =>
-      Project(id: id ?? this.id, name: name ?? this.name);
+  Project copyWith({int? id, String? name, bool? isActive}) => Project(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    isActive: isActive ?? this.isActive,
+  );
   Project copyWithCompanion(ProjectsCompanion data) {
     return Project(
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
+      isActive: data.isActive.present ? data.isActive.value : this.isActive,
     );
   }
 
@@ -130,42 +167,59 @@ class Project extends DataClass implements Insertable<Project> {
   String toString() {
     return (StringBuffer('Project(')
           ..write('id: $id, ')
-          ..write('name: $name')
+          ..write('name: $name, ')
+          ..write('isActive: $isActive')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name);
+  int get hashCode => Object.hash(id, name, isActive);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is Project && other.id == this.id && other.name == this.name);
+      (other is Project &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.isActive == this.isActive);
 }
 
 class ProjectsCompanion extends UpdateCompanion<Project> {
   final Value<int> id;
   final Value<String> name;
+  final Value<bool> isActive;
   const ProjectsCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
+    this.isActive = const Value.absent(),
   });
   ProjectsCompanion.insert({
     this.id = const Value.absent(),
     required String name,
+    this.isActive = const Value.absent(),
   }) : name = Value(name);
   static Insertable<Project> custom({
     Expression<int>? id,
     Expression<String>? name,
+    Expression<bool>? isActive,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (name != null) 'name': name,
+      if (isActive != null) 'is_active': isActive,
     });
   }
 
-  ProjectsCompanion copyWith({Value<int>? id, Value<String>? name}) {
-    return ProjectsCompanion(id: id ?? this.id, name: name ?? this.name);
+  ProjectsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? name,
+    Value<bool>? isActive,
+  }) {
+    return ProjectsCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      isActive: isActive ?? this.isActive,
+    );
   }
 
   @override
@@ -177,6 +231,9 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     if (name.present) {
       map['name'] = Variable<String>(name.value);
     }
+    if (isActive.present) {
+      map['is_active'] = Variable<bool>(isActive.value);
+    }
     return map;
   }
 
@@ -184,7 +241,8 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
   String toString() {
     return (StringBuffer('ProjectsCompanion(')
           ..write('id: $id, ')
-          ..write('name: $name')
+          ..write('name: $name, ')
+          ..write('isActive: $isActive')
           ..write(')'))
         .toString();
   }
@@ -613,9 +671,17 @@ abstract class _$AppDatabase extends GeneratedDatabase {
 }
 
 typedef $$ProjectsTableCreateCompanionBuilder =
-    ProjectsCompanion Function({Value<int> id, required String name});
+    ProjectsCompanion Function({
+      Value<int> id,
+      required String name,
+      Value<bool> isActive,
+    });
 typedef $$ProjectsTableUpdateCompanionBuilder =
-    ProjectsCompanion Function({Value<int> id, Value<String> name});
+    ProjectsCompanion Function({
+      Value<int> id,
+      Value<String> name,
+      Value<bool> isActive,
+    });
 
 final class $$ProjectsTableReferences
     extends BaseReferences<_$AppDatabase, $ProjectsTable, Project> {
@@ -657,6 +723,11 @@ class $$ProjectsTableFilterComposer
 
   ColumnFilters<String> get name => $composableBuilder(
     column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isActive => $composableBuilder(
+    column: $table.isActive,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -704,6 +775,11 @@ class $$ProjectsTableOrderingComposer
     column: $table.name,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get isActive => $composableBuilder(
+    column: $table.isActive,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ProjectsTableAnnotationComposer
@@ -720,6 +796,9 @@ class $$ProjectsTableAnnotationComposer
 
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<bool> get isActive =>
+      $composableBuilder(column: $table.isActive, builder: (column) => column);
 
   Expression<T> tasksRefs<T extends Object>(
     Expression<T> Function($$TasksTableAnnotationComposer a) f,
@@ -777,10 +856,18 @@ class $$ProjectsTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
-              }) => ProjectsCompanion(id: id, name: name),
+                Value<bool> isActive = const Value.absent(),
+              }) => ProjectsCompanion(id: id, name: name, isActive: isActive),
           createCompanionCallback:
-              ({Value<int> id = const Value.absent(), required String name}) =>
-                  ProjectsCompanion.insert(id: id, name: name),
+              ({
+                Value<int> id = const Value.absent(),
+                required String name,
+                Value<bool> isActive = const Value.absent(),
+              }) => ProjectsCompanion.insert(
+                id: id,
+                name: name,
+                isActive: isActive,
+              ),
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (

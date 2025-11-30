@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../database/app_database.dart';
 import '../main.dart';
+import '../services/settings_service.dart';
 
 class ReportScreen extends StatefulWidget {
   const ReportScreen({super.key});
@@ -32,8 +33,9 @@ class _ReportScreenState extends State<ReportScreen> {
 
   // [수정] 복사 로직: 프로젝트 이름 포함하기
   void _copyToClipboard(List<TaskWithProject> items) {
+    final settings = SettingsService();
     final buffer = StringBuffer();
-    buffer.writeln("[주간 업무 보고]");
+    buffer.writeln(settings.weeklyHeader);
     buffer.writeln(
       "기간: ${DateFormat('yyyy-MM-dd').format(_selectedDateRange.start)} ~ ${DateFormat('yyyy-MM-dd').format(_selectedDateRange.end)}",
     );
@@ -49,6 +51,11 @@ class _ReportScreenState extends State<ReportScreen> {
 
       // 예: - [한미글로벌] 회의록 작성 (05/20 완료)
       buffer.writeln("- $projectPrefix${task.title} ($dateStr 완료)");
+    }
+
+    if (settings.weeklyFooter.isNotEmpty) {
+      buffer.writeln();
+      buffer.writeln(settings.weeklyFooter);
     }
 
     Clipboard.setData(ClipboardData(text: buffer.toString()));

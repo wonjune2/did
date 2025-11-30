@@ -1,17 +1,24 @@
 import 'package:did/database/app_database.dart';
 import 'package:did/screens/main_screen.dart';
+import 'package:did/services/settings_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 late AppDatabase db;
 
-void main() {
+void main() async {
+  // Added async keyword
   WidgetsFlutterBinding.ensureInitialized();
 
   // DB 초기화
   db = AppDatabase();
 
-  runApp(const MainApp());
+  // 설정 초기화
+  await SettingsService().init();
+
+  runApp(
+    const MainApp(),
+  ); // Kept MainApp as MyApp is not defined in the provided context
 }
 
 class MainApp extends StatelessWidget {

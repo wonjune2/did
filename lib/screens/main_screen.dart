@@ -1,5 +1,6 @@
 import 'package:did/screens/calendar_screen.dart';
 import 'package:did/screens/report_screen.dart';
+import 'package:did/screens/settings_screen.dart';
 import 'package:did/screens/todo_screen.dart';
 import 'package:flutter/material.dart';
 
@@ -40,13 +41,22 @@ class _MainScreenState extends State<MainScreen> {
                 icon: Icon(Icons.calendar_today),
                 label: Text('달력'),
               ),
+              NavigationRailDestination(
+                icon: Icon(Icons.settings),
+                label: Text('설정'),
+              ),
             ],
           ),
           const VerticalDivider(thickness: 1, width: 1),
           Expanded(
             child: IndexedStack(
               index: _selectedIndex,
-              children: const [TodoScreen(), ReportScreen(), CalendarScreen()],
+              children: const [
+                TodoScreen(),
+                ReportScreen(),
+                CalendarScreen(),
+                SettingsScreen(),
+              ],
             ),
           ),
         ],
