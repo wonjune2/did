@@ -11,7 +11,8 @@ class Projects extends Table {
 class Tasks extends Table {
   IntColumn get id => integer().autoIncrement()(); // 자동 증가 ID
   TextColumn get title => text()(); // 할 일 제목
-  BoolColumn get isCompleted => boolean().withDefault(const Constant(false))(); // 완료 여부
+  BoolColumn get isCompleted =>
+      boolean().withDefault(const Constant(false))(); // 완료 여부
   DateTimeColumn get createdAt => dateTime()(); // 생성 시간
   DateTimeColumn get completeAt => dateTime().nullable()(); // 완료 시간
 
@@ -68,6 +69,30 @@ class AppDatabase extends _$AppDatabase {
 
   // -- 업무 쿼리 메서드들 (Service 역할) --
 
+  // [New] '오늘 할 일' 탭용: 완료 안 된 것만 가져오기 + 프로젝트 정보
+  Stream<List<TaskWithProject>> watchIncompleteTasksWithProject() {
+    final query = select(
+      tasks,
+    ).join([leftOuterJoin(projects, projects.id.equalsExp(tasks.projectId))]);
+
+    // 🔥 핵심: 완료되지 않은 것(false)만 필터링
+    query.where(tasks.isCompleted.equals(false));
+
+    // 최신순 정렬
+    query.orderBy([
+      OrderingTerm(expression: tasks.createdAt, mode: OrderingMode.desc),
+    ]);
+
+    return query.watch().map((rows) {
+      return rows.map((row) {
+        return TaskWithProject(
+          task: row.readTable(tasks),
+          project: row.readTableOrNull(projects),
+        );
+      }).toList();
+    });
+  }
+
   // 모든 업무 실시간 감지 (최신순 정렬)
   Stream<List<TaskWithProject>> watchAllTasksWithProjects() {
     final query = select(
@@ -75,11 +100,16 @@ class AppDatabase extends _$AppDatabase {
     ).join([leftOuterJoin(projects, projects.id.equalsExp(tasks.projectId))]);
 
     // 최신순 정렬
-    query.orderBy([OrderingTerm(expression: tasks.createdAt, mode: OrderingMode.desc)]);
+    query.orderBy([
+      OrderingTerm(expression: tasks.createdAt, mode: OrderingMode.desc),
+    ]);
 
     return query.watch().map((rows) {
       return rows.map((row) {
-        return TaskWithProject(task: row.readTable(tasks), project: row.readTableOrNull(projects));
+        return TaskWithProject(
+          task: row.readTable(tasks),
+          project: row.readTableOrNull(projects),
+        );
       }).toList();
     });
   }
@@ -87,7 +117,11 @@ class AppDatabase extends _$AppDatabase {
   // 업무 추가
   Future<int> insertTask(String title, {int? projectId}) {
     return into(tasks).insert(
-      TasksCompanion.insert(title: title, createdAt: DateTime.now(), projectId: Value(projectId)),
+      TasksCompanion.insert(
+        title: title,
+        createdAt: DateTime.now(),
+        projectId: Value(projectId),
+      ),
     );
   }
 
@@ -95,7 +129,10 @@ class AppDatabase extends _$AppDatabase {
   Future<void> toggleTask(Task task) {
     final newStatus = !task.isCompleted;
     return update(tasks).replace(
-      task.copyWith(isCompleted: newStatus, completeAt: Value(newStatus ? DateTime.now() : null)),
+      task.copyWith(
+        isCompleted: newStatus,
+        completeAt: Value(newStatus ? DateTime.now() : null),
+      ),
     );
   }
 
@@ -104,9 +141,11 @@ class AppDatabase extends _$AppDatabase {
     return (delete(tasks)..where((t) => t.id.equals(id))).go();
   }
 
-  // 주간보고: 기간별 완료 업무 조회 (주간 보고)
-  Stream<List<Task>> watchCompletedTasksByDate(DateTime start, DateTime end) {
-    // start는 00:00:00, end는 23:59:59로 설정
+  // 2. [Report용] 기간별 완료 업무 + 프로젝트 정보
+  Stream<List<TaskWithProject>> watchCompletedTasksWithProjectByDate(
+    DateTime start,
+    DateTime end,
+  ) {
     final startDate = DateTime(start.year, start.month, start.day);
     final endDate = DateTime(end.year, end.month, end.day, 23, 59, 59);
 
@@ -115,17 +154,21 @@ class AppDatabase extends _$AppDatabase {
     ).join([leftOuterJoin(projects, projects.id.equalsExp(tasks.projectId))]);
 
     query.where(
-      tasks.isCompleted.equals(true) & tasks.completeAt.isBetweenValues(startDate, endDate),
+      tasks.isCompleted.equals(true) &
+          tasks.completeAt.isBetweenValues(startDate, endDate),
     );
 
+    // 정렬: 완료일 순서
     query.orderBy([OrderingTerm(expression: tasks.completeAt)]);
 
-    return (select(tasks)
-          ..where(
-            (t) => t.isCompleted.equals(true) & t.completeAt.isBetweenValues(startDate, endDate),
-          )
-          ..orderBy([(t) => OrderingTerm(expression: t.completeAt)]))
-        .watch();
+    return query.watch().map((rows) {
+      return rows.map((row) {
+        return TaskWithProject(
+          task: row.readTable(tasks),
+          project: row.readTableOrNull(projects),
+        );
+      }).toList();
+    });
   }
 
   // 하스토리용: 완료된 업무만 최신순으로 실시간 감지
@@ -139,7 +182,10 @@ class AppDatabase extends _$AppDatabase {
 
     return query.watch().map((rows) {
       return rows.map((row) {
-        return TaskWithProject(task: row.readTable(tasks), project: row.readTableOrNull(projects));
+        return TaskWithProject(
+          task: row.readTable(tasks),
+          project: row.readTableOrNull(projects),
+        );
       }).toList();
     });
   }

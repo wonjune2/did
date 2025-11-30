@@ -1,3 +1,5 @@
+import 'package:did/utils/report_format.dart';
+import 'package:did/widgets/animated_task_title.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -37,7 +39,10 @@ class _TodoScreenState extends State<TodoScreen> {
           autofocus: true,
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("취소")),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("취소"),
+          ),
           FilledButton(
             onPressed: () {
               if (projectController.text.isNotEmpty) {
@@ -52,7 +57,23 @@ class _TodoScreenState extends State<TodoScreen> {
     );
   }
 
-  void _toggleTask(Task task) => db.toggleTask(task);
+  // [수정] 토글 시 DB 업데이트
+  void _toggleTask(Task task) {
+    db.toggleTask(task);
+    // 팁: 여기서 SnackBar를 띄워주면 좋습니다.
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text("업무 완료! 고생하셨습니다 🎉"),
+        action: SnackBarAction(
+          label: "취소",
+          onPressed: () => db.toggleTask(task), // 실수로 눌렀을 때 되돌리기
+        ),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
   void _deleteTask(int id) => db.deleteTask(id);
 
   // 복사 로직 (프로젝트 이름도 같이 복사되게 수정!)
@@ -60,14 +81,46 @@ class _TodoScreenState extends State<TodoScreen> {
     final incomplete = items.where((i) => !i.task.isCompleted).toList();
     if (incomplete.isEmpty) return;
 
-    final buffer = StringBuffer();
-    buffer.writeln("[진행 중인 업무]");
+    final Map<String, List<String>> groupedTasks = {};
+
     for (var item in incomplete) {
-      final projectPrefix = item.project != null ? "[${item.project!.name}] " : "";
-      buffer.writeln("- $projectPrefix${item.task.title}");
+      final projectName = item.project?.name;
+      if (projectName == null) {
+        continue;
+      }
+      if (!groupedTasks.containsKey(projectName)) {
+        groupedTasks[projectName] = [];
+      }
+      groupedTasks[projectName]!.add(item.task.title);
     }
-    Clipboard.setData(ClipboardData(text: buffer.toString()));
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('복사 완료!')));
+
+    final buffer = StringBuffer();
+    // 반복문을 돌리기 위한 인덱스 변수
+    int projectIndex = 0;
+
+    for (var entry in groupedTasks.entries) {
+      // 1. 프로젝트 이름 출력 (ex: 한미글로벌 )
+      buffer.write("${entry.key} ");
+
+      // 2. 해당 프로젝트의 업무들을 쉼표로 연결해서 한 방에 출력
+      // join 함수가 알아서 사이사이에만 쉼표를 넣어줍니다.
+      buffer.write(entry.value.join(", "));
+
+      // 3. [핵심] 마지막 프로젝트가 아니라면, 다음 프로젝트와의 사이에 쉼표 추가
+      if (projectIndex < groupedTasks.length - 1) {
+        buffer.write(", ");
+      }
+
+      // 인덱스 증가
+      projectIndex++;
+    }
+
+    final result = ReportFormat().dailyReportFormat(buffer.toString());
+
+    Clipboard.setData(ClipboardData(text: result));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('복사 완료!')));
   }
 
   @override
@@ -95,12 +148,21 @@ class _TodoScreenState extends State<TodoScreen> {
                             decoration: const InputDecoration(
                               labelText: '프로젝트 선택',
                               border: OutlineInputBorder(),
-                              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
                             ),
                             items: [
-                              const DropdownMenuItem(value: null, child: Text("프로젝트 없음 (일반)")),
+                              const DropdownMenuItem(
+                                value: null,
+                                child: Text("프로젝트 없음 (일반)"),
+                              ),
                               ...projects.map(
-                                (p) => DropdownMenuItem(value: p.id, child: Text(p.name)),
+                                (p) => DropdownMenuItem(
+                                  value: p.id,
+                                  child: Text(p.name),
+                                ),
                               ),
                             ],
                             onChanged: (value) {
@@ -149,12 +211,16 @@ class _TodoScreenState extends State<TodoScreen> {
           // --- 하단 리스트 영역 ---
           Expanded(
             child: StreamBuilder<List<TaskWithProject>>(
-              stream: db.watchAllTasksWithProjects(), // 수정된 쿼리 호출
+              stream: db.watchIncompleteTasksWithProject(), // 수정된 쿼리 호출
               builder: (context, snapshot) {
-                if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
                 final items = snapshot.data!;
-                final incompleteCount = items.where((i) => !i.task.isCompleted).length;
+                final incompleteCount = items
+                    .where((i) => !i.task.isCompleted)
+                    .length;
 
                 if (items.isEmpty) {
                   return const Center(child: Text("업무가 없습니다."));
@@ -181,54 +247,18 @@ class _TodoScreenState extends State<TodoScreen> {
                     ),
                     const Divider(height: 1),
 
-                    // 리스트
                     Expanded(
                       child: ListView.builder(
                         itemCount: items.length,
                         itemBuilder: (context, index) {
                           final item = items[index];
-                          final task = item.task;
-                          final project = item.project;
 
-                          return ListTile(
-                            leading: Checkbox(
-                              value: task.isCompleted,
-                              onChanged: (value) => _toggleTask(task),
-                            ),
-                            title: Row(
-                              children: [
-                                // 프로젝트 뱃지 (있으면 표시)
-                                if (project != null)
-                                  Container(
-                                    margin: const EdgeInsets.only(right: 8),
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: Colors.blue.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(4),
-                                      border: Border.all(color: Colors.blue.withOpacity(0.3)),
-                                    ),
-                                    child: Text(
-                                      project.name,
-                                      style: const TextStyle(fontSize: 12, color: Colors.blue),
-                                    ),
-                                  ),
-                                Expanded(
-                                  child: Text(
-                                    task.title,
-                                    style: TextStyle(
-                                      decoration: task.isCompleted
-                                          ? TextDecoration.lineThrough
-                                          : null,
-                                      color: task.isCompleted ? Colors.grey : null,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.delete_outline, size: 18),
-                              onPressed: () => _deleteTask(task.id),
-                            ),
+                          // [핵심] AnimatedTaskTile 사용
+                          return AnimatedTaskTile(
+                            key: ValueKey(item.task.id), // 키 필수!
+                            item: item,
+                            onToggle: (task) => _toggleTask(task),
+                            onDelete: (id) => _deleteTask(id),
                           );
                         },
                       ),

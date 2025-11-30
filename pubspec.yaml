@@ -9,10 +9,13 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   drift: ^2.29.0
   drift_flutter: ^0.2.7
   path_provider: ^2.1.5
   intl: ^0.20.2
+  table_calendar: ^3.2.0
 
 dev_dependencies:
   flutter_test:
