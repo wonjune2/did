@@ -2,10 +2,14 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <!-- 앱이 인터넷 통신을 할 수 있게 함 (필수) -->
+    <!-- 앱 샌드박스 사용 -->
+    <key>com.apple.security.app-sandbox</key>
+    <true/>
+    <!-- 인터넷 연결 (필수) -->
     <key>com.apple.security.network.client</key>
     <true/>
-	<key>com.apple.security.app-sandbox</key>
-	<true/>
+    <!-- 파일 저장/불러오기 권한 (DB 및 파일 저장을 위해 필수) -->
+    <key>com.apple.security.files.user-selected.read-write</key>
+    <true/>
 </dict>
 </plist>
