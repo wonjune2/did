@@ -14,6 +14,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _dailyFooterController = TextEditingController();
   final _weeklyHeaderController = TextEditingController();
   final _weeklyFooterController = TextEditingController();
+  final _weeklyTaskHeaderController = TextEditingController();
+  final _weeklyTaskFooterController = TextEditingController();
+
+  final _weeklyHeaderFocusNode = FocusNode();
+
+  final List<String> _prefixTypes = ['인덱스', '직접 입력'];
 
   @override
   void initState() {
@@ -27,6 +33,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _dailyFooterController.text = settings.dailyFooter;
     _weeklyHeaderController.text = settings.weeklyHeader;
     _weeklyFooterController.text = settings.weeklyFooter;
+    _weeklyTaskHeaderController.text = settings.weeklyTaskHeader;
+    _weeklyTaskFooterController.text = settings.weeklyTaskFooter;
   }
 
   Future<void> _saveSettings() async {
@@ -35,11 +43,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await settings.setDailyFooter(_dailyFooterController.text);
     await settings.setWeeklyHeader(_weeklyHeaderController.text);
     await settings.setWeeklyFooter(_weeklyFooterController.text);
+    await settings.setWeeklyTaskHeader(_weeklyTaskHeaderController.text);
+    await settings.setWeeklyTaskFooter(_weeklyTaskFooterController.text);
 
     if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('설정이 저장되었습니다.')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('설정이 저장되었습니다.')));
     }
   }
 
@@ -49,6 +57,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _dailyFooterController.dispose();
     _weeklyHeaderController.dispose();
     _weeklyFooterController.dispose();
+    _weeklyTaskHeaderController.dispose();
+    _weeklyTaskFooterController.dispose();
+    _weeklyHeaderFocusNode.dispose();
+
     super.dispose();
   }
 
@@ -57,9 +69,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('설정'),
-        actions: [
-          IconButton(onPressed: _saveSettings, icon: const Icon(Icons.save)),
-        ],
+        actions: [IconButton(onPressed: _saveSettings, icon: const Icon(Icons.save))],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16.0),
@@ -84,24 +94,87 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
           const SizedBox(height: 32),
-          _buildSectionTitle('주간 업무 보고 포맷'),
+          _buildSectionTitle('주간 보고 포맷'),
           const SizedBox(height: 8),
-          TextField(
-            controller: _weeklyHeaderController,
-            decoration: const InputDecoration(
-              labelText: '선행문',
-              border: OutlineInputBorder(),
-              helperText: '예: [주간 업무 보고]',
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: DropdownMenu<String>(
+                  focusNode: _weeklyHeaderFocusNode,
+                  expandedInsets: EdgeInsets.zero,
+                  controller: _weeklyHeaderController,
+                  label: const Text('선행문'),
+                  requestFocusOnTap: true,
+                  enableFilter: true,
+                  dropdownMenuEntries: _prefixTypes.map((value) {
+                    return DropdownMenuEntry(value: value, label: value);
+                  }).toList(),
+                  onSelected: (value) {
+                    if (value == '직접 입력') {
+                      _weeklyHeaderController.text = '';
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        _weeklyHeaderFocusNode.requestFocus();
+                      });
+                    } else {
+                      _weeklyHeaderController.text = value!;
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: SizedBox(
+                  height: 56,
+                  child: Card(
+                    color: Theme.of(context).colorScheme.primaryContainer,
+                    child: const FittedBox(child: Text('[프로젝트 명]')),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  controller: _weeklyFooterController,
+                  decoration: const InputDecoration(labelText: '후행문', border: OutlineInputBorder()),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
-          TextField(
-            controller: _weeklyFooterController,
-            decoration: const InputDecoration(
-              labelText: '후행문',
-              border: OutlineInputBorder(),
-              helperText: '예: 이상입니다.',
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _weeklyTaskHeaderController,
+                  decoration: const InputDecoration(
+                    labelText: '선행문',
+                    border: OutlineInputBorder(),
+                    // helperText: '예: - ',
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: SizedBox(
+                  height: 56,
+                  child: Card(
+                    color: Theme.of(context).colorScheme.primaryContainer,
+                    child: const FittedBox(child: Text('[완료된 업무]')),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  controller: _weeklyTaskFooterController,
+                  decoration: const InputDecoration(
+                    labelText: '후행문',
+                    border: OutlineInputBorder(),
+                    // helperText: '예: 이상입니다.',
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 32),
           _buildSectionTitle('프로젝트 관리'),
@@ -142,10 +215,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           title: const Text('프로젝트 삭제'),
           content: const Text('정말로 이 프로젝트를 삭제하시겠습니까?'),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('취소'),
-            ),
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('취소')),
             TextButton(
               onPressed: () => Navigator.pop(context, true),
               child: const Text('삭제', style: TextStyle(color: Colors.red)),
@@ -158,17 +228,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (confirm == true) {
       await db.deleteProject(id);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('프로젝트가 삭제되었습니다.')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('프로젝트가 삭제되었습니다.')));
       }
     }
   }
 
   Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-    );
+    return Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold));
   }
 }

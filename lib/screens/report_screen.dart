@@ -35,11 +35,24 @@ class _ReportScreenState extends State<ReportScreen> {
   void _copyToClipboard(List<TaskWithProject> items) {
     final settings = SettingsService();
     final buffer = StringBuffer();
-    buffer.writeln(settings.weeklyHeader);
-    buffer.writeln(
-      "기간: ${DateFormat('yyyy-MM-dd').format(_selectedDateRange.start)} ~ ${DateFormat('yyyy-MM-dd').format(_selectedDateRange.end)}",
-    );
-    buffer.writeln();
+    Map<String, List<Task>> tasks = {};
+
+    final prefix = settings.weeklyHeader;
+    for (var item in items) {
+      if (item.project == null) continue;
+
+      final projectName = item.project!.name;
+      if (!tasks.containsKey(projectName)) {
+        tasks[projectName] = [];
+      }
+      tasks[projectName]!.add(item.task);
+    }
+
+    if (prefix == '인덱스') {
+      for (int i = 1; i <= tasks.length; i++) {
+        buffer.writeln('$i. ${tasks[i]}');
+      }
+    }
 
     for (var item in items) {
       final task = item.task;
@@ -74,8 +87,7 @@ class _ReportScreenState extends State<ReportScreen> {
           _selectedDateRange.end,
         ), // [수정] 새 쿼리
         builder: (context, snapshot) {
-          if (!snapshot.hasData)
-            return const Center(child: CircularProgressIndicator());
+          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
 
           final items = snapshot.data!;
 
@@ -87,10 +99,7 @@ class _ReportScreenState extends State<ReportScreen> {
                 // 상단 컨트롤 바
                 Row(
                   children: [
-                    Text(
-                      "보고 기간: ",
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
+                    Text("보고 기간: ", style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(width: 8),
                     OutlinedButton.icon(
                       onPressed: _pickDateRange,
@@ -101,9 +110,7 @@ class _ReportScreenState extends State<ReportScreen> {
                     ),
                     const Spacer(),
                     FilledButton.icon(
-                      onPressed: items.isEmpty
-                          ? null
-                          : () => _copyToClipboard(items),
+                      onPressed: items.isEmpty ? null : () => _copyToClipboard(items),
                       icon: const Icon(Icons.copy),
                       label: const Text("텍스트로 복사하기"),
                     ),
@@ -123,10 +130,7 @@ class _ReportScreenState extends State<ReportScreen> {
                             final project = item.project;
 
                             return ListTile(
-                              leading: const Icon(
-                                Icons.check_circle,
-                                color: Colors.green,
-                              ),
+                              leading: const Icon(Icons.check_circle, color: Colors.green),
                               title: Row(
                                 children: [
                                   // [New] 프로젝트 뱃지
@@ -140,16 +144,11 @@ class _ReportScreenState extends State<ReportScreen> {
                                       decoration: BoxDecoration(
                                         color: Colors.blue.withOpacity(0.1),
                                         borderRadius: BorderRadius.circular(4),
-                                        border: Border.all(
-                                          color: Colors.blue.withOpacity(0.3),
-                                        ),
+                                        border: Border.all(color: Colors.blue.withOpacity(0.3)),
                                       ),
                                       child: Text(
                                         project.name,
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.blue,
-                                        ),
+                                        style: const TextStyle(fontSize: 12, color: Colors.blue),
                                       ),
                                     ),
                                   Expanded(child: Text(task.title)),
