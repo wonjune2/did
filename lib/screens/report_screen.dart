@@ -49,26 +49,23 @@ class _ReportScreenState extends State<ReportScreen> {
     }
 
     if (prefix == '인덱스') {
-      for (int i = 1; i <= tasks.length; i++) {
-        buffer.writeln('$i. ${tasks[i]}');
+      int prefixIndex = 1;
+      for (var task in tasks.entries) {
+        buffer.writeln('$prefixIndex. ${task.key}${settings.weeklyFooter}');
+        for (var item in task.value) {
+          buffer.writeln('${settings.weeklyTaskHeader}${item.title}${settings.weeklyTaskFooter}');
+        }
+        buffer.writeln();
+        prefixIndex++;
       }
-    }
-
-    for (var item in items) {
-      final task = item.task;
-      final project = item.project;
-      final dateStr = DateFormat('MM/dd').format(task.completeAt!);
-
-      // 프로젝트가 있으면 [한미글로벌], 없으면 빈칸
-      final projectPrefix = project != null ? "[${project.name}] " : "";
-
-      // 예: - [한미글로벌] 회의록 작성 (05/20 완료)
-      buffer.writeln("- $projectPrefix${task.title} ($dateStr 완료)");
-    }
-
-    if (settings.weeklyFooter.isNotEmpty) {
-      buffer.writeln();
-      buffer.writeln(settings.weeklyFooter);
+    } else {
+      for (var task in tasks.entries) {
+        buffer.writeln('${settings.weeklyFooter}${task.key}${settings.weeklyFooter}');
+        for (var item in task.value) {
+          buffer.writeln('${settings.weeklyTaskHeader}${item.title}${settings.weeklyTaskFooter}');
+        }
+        buffer.writeln();
+      }
     }
 
     Clipboard.setData(ClipboardData(text: buffer.toString()));

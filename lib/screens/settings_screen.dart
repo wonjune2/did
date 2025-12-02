@@ -16,6 +16,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _weeklyFooterController = TextEditingController();
   final _weeklyTaskHeaderController = TextEditingController();
   final _weeklyTaskFooterController = TextEditingController();
+  bool _isDirectInputMode = false;
 
   final _weeklyHeaderFocusNode = FocusNode();
 
@@ -99,27 +100,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Row(
             children: [
               Expanded(
-                child: DropdownMenu<String>(
-                  focusNode: _weeklyHeaderFocusNode,
-                  expandedInsets: EdgeInsets.zero,
-                  controller: _weeklyHeaderController,
-                  label: const Text('선행문'),
-                  requestFocusOnTap: true,
-                  enableFilter: true,
-                  dropdownMenuEntries: _prefixTypes.map((value) {
-                    return DropdownMenuEntry(value: value, label: value);
-                  }).toList(),
-                  onSelected: (value) {
-                    if (value == '직접 입력') {
-                      _weeklyHeaderController.text = '';
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        _weeklyHeaderFocusNode.requestFocus();
-                      });
-                    } else {
-                      _weeklyHeaderController.text = value!;
-                    }
-                  },
-                ),
+                child: _isDirectInputMode
+                    ? TextField(
+                        controller: _weeklyHeaderController,
+                        autofocus: true,
+                        decoration: InputDecoration(
+                          labelText: '직접 입력',
+                          border: const OutlineInputBorder(),
+                          suffixIcon: IconButton(
+                            onPressed: () {
+                              setState(() {
+                                _isDirectInputMode = false;
+                                _weeklyHeaderController.clear();
+                              });
+                            },
+                            icon: const Icon(Icons.close),
+                          ),
+                        ),
+                      )
+                    : DropdownButtonFormField<String>(
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          labelText: '선행문',
+                        ),
+                        items: _prefixTypes.map((value) {
+                          return DropdownMenuItem(value: value, child: Text(value));
+                        }).toList(),
+                        onChanged: (value) {
+                          if (value == '직접 입력') {
+                            setState(() {
+                              _isDirectInputMode = true; // 모드 변경!
+                              _weeklyHeaderController.clear();
+                            });
+                          } else {
+                            _weeklyHeaderController.text = value!;
+                          }
+                        },
+                      ),
               ),
               const SizedBox(width: 8),
               Expanded(

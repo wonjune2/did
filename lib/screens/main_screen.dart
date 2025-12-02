@@ -29,46 +29,20 @@ class _MainScreenState extends State<MainScreen> {
             },
             labelType: NavigationRailLabelType.all,
             destinations: const [
-              NavigationRailDestination(
-                icon: Icon(Icons.today),
-                label: Text('To-do'),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.summarize),
-                label: Text('주간 보고'),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.calendar_today),
-                label: Text('달력'),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.settings),
-                label: Text('설정'),
-              ),
+              NavigationRailDestination(icon: Icon(Icons.today), label: Text('To-do')),
+              NavigationRailDestination(icon: Icon(Icons.summarize), label: Text('주간 보고')),
+              NavigationRailDestination(icon: Icon(Icons.calendar_today), label: Text('달력')),
+              NavigationRailDestination(icon: Icon(Icons.settings), label: Text('설정')),
             ],
           ),
           const VerticalDivider(thickness: 1, width: 1),
           Expanded(
             child: IndexedStack(
               index: _selectedIndex,
-              children: const [
-                TodoScreen(),
-                ReportScreen(),
-                CalendarScreen(),
-                SettingsScreen(),
-              ],
+              children: const [TodoScreen(), ReportScreen(), CalendarScreen(), SettingsScreen()],
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildContent(String title) {
-    return Center(
-      child: Text(
-        title,
-        style: const TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
       ),
     );
   }
